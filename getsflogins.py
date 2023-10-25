@@ -15,7 +15,7 @@ args = parser.parse_args()
 DEV = True if args.dev else False
 DAYS_OF_LOGS_TO_PULL = args.days
 
-logging.basicConfig(filename='saleforce.log', level=logging.INFO,
+logging.basicConfig(filename='logs/saleforce.log', level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger("logger")
 
@@ -126,7 +126,7 @@ def get_sf_logs(organization, credentials):
             }
             if DEV:
                 print(login)
-            with open("{}_sf_login_history.log".format(organization), "a", encoding='utf-8') as logs:
+            with open("{}.log".format(organization), "a", encoding='utf-8') as logs:
                 logs.write(json.dumps(login) + '\n')
     else:
         logger.info("No records found!!")
