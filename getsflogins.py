@@ -17,7 +17,13 @@ args = parser.parse_args()
 DEV = True if args.dev else False
 DAYS_OF_LOGS_TO_PULL = args.days
 logins_to_review = []
-logging.basicConfig(filename='logs/saleforce.log', level=logging.INFO,
+
+basepath = os.path.dirname(os.path.realpath(__file__))
+logfolder = os.path.join(basepath, 'logs')
+logfile = os.path.join(logfolder, 'saleforce.log')
+
+
+logging.basicConfig(filename=logfile, level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger("logger")
 
@@ -55,7 +61,7 @@ def get_username(sf, user_id):
 
 
 def get_last_login_time(organization):
-    filename = f'{organization}.log'
+    filename = os.path.join(logfolder, f'{organization}.log')
     if os.path.isfile(filename):
         if DEV:
             print("Log file found, pulling last login time")
@@ -142,7 +148,7 @@ def get_sf_logs(organization, credentials):
                     logins_to_review.append(login)
             if DEV:
                 print(login)
-            with open("{}.log".format(organization), "a", encoding='utf-8') as logs:
+            with open(os.path.join(logfolder, "{}.log".format(organization)), "a", encoding='utf-8') as logs:
                 logs.write(json.dumps(login) + '\n')
     else:
         logger.info("No records found!!")

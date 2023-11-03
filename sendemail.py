@@ -2,8 +2,13 @@ import msal
 import requests
 import logging
 from sendteams import sendtoteams
+import os
 
-logging.basicConfig(filename='logs/saleforce.log', level=logging.INFO,
+basepath = os.path.dirname(os.path.realpath(__file__))
+logfolder = os.path.join(basepath, 'logs')
+logfile = os.path.join(logfolder, 'saleforce.log')
+
+logging.basicConfig(filename=logfile, level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger("maillogger")
 
@@ -33,7 +38,7 @@ def generate_html_table(data):
 
 
 def send_alert(credentials, logins):
-    with open('alerts_template.html', 'r') as file:
+    with open(os.path.join(basepath, 'alerts_template.html'), 'r') as file:
         email_template = file.read()
 
     dynamic_table = generate_html_table(logins)

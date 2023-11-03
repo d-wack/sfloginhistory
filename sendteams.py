@@ -1,8 +1,14 @@
 import requests
 import json
 import logging
+import os
 
-logging.basicConfig(filename='logs/saleforce.log', level=logging.INFO,
+
+basepath = os.path.dirname(os.path.realpath(__file__))
+logfolder = os.path.join(basepath, 'logs')
+logfile = os.path.join(logfolder, 'saleforce.log')
+
+logging.basicConfig(filename=logfile, level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger("teamslogger")
 
