@@ -4,6 +4,7 @@ import logging
 from sendteams import sendtoteams
 import os
 
+# Base Path
 basepath = os.path.dirname(os.path.realpath(__file__))
 logfolder = os.path.join(basepath, 'logs')
 logfile = os.path.join(logfolder, 'saleforce.log')

@@ -18,6 +18,7 @@ DEV = True if args.dev else False
 DAYS_OF_LOGS_TO_PULL = args.days
 logins_to_review = []
 
+# Base Path
 basepath = os.path.dirname(os.path.realpath(__file__))
 logfolder = os.path.join(basepath, 'logs')
 logfile = os.path.join(logfolder, 'saleforce.log')
