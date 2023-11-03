@@ -2,6 +2,7 @@
 from simple_salesforce import Salesforce, SalesforceAuthenticationFailed, SalesforceGeneralError
 from datetime import datetime, timedelta, timezone
 from botocore.exceptions import ClientError
+from sendemail import send_alert
 import boto3
 import argparse
 import os
@@ -15,7 +16,7 @@ args = parser.parse_args()
 
 DEV = True if args.dev else False
 DAYS_OF_LOGS_TO_PULL = args.days
-
+logins_to_review = []
 logging.basicConfig(filename='logs/saleforce.log', level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger("logger")
@@ -26,7 +27,7 @@ def get_secret():
     region_name = "us-east-1"
 
     # Create a Secrets Manager client
-    session = boto3.session.Session()
+    session = boto3.session.Session(profile_name='fountainlife')
     client = session.client(
         service_name='secretsmanager',
         region_name=region_name
@@ -54,18 +55,30 @@ def get_username(sf, user_id):
 
 
 def get_last_login_time(organization):
-    filename = f'{organization}_sf_login_history.log'
+    filename = f'{organization}.log'
     if os.path.isfile(filename):
+        if DEV:
+            print("Log file found, pulling last login time")
+        logger.info("Log file found, pulling last login time")
         with open(filename, 'r', newline="\n") as log:
             lines = log.readlines()[-1]
-            return json.loads(lines)["LoginTime"]
+            last_login = json.loads(lines)["LoginTime"]
+            if DEV:
+                print("Last Login: ", last_login)
+            return last_login
     else:
+        if DEV:
+            print("No log file found, pulling last 24 hours")
+        logger.info("No log file found, pulling last 24 hours")
         return (datetime.now(timezone.utc) - timedelta(days=DAYS_OF_LOGS_TO_PULL)).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
 
 def get_sf_logs(organization, credentials):
     sf = None
+
     if organization == 'fountainlife':
+        if DEV:
+            print("Pulling Fountainlife Salesforce Login History Logs")
         logger.info("Pulling Fountainlife Salesforce Login History Logs")
         try:
             sf = Salesforce(username=credentials["FL_USERNAME"], password=credentials["PASSWORD"],
@@ -77,6 +90,8 @@ def get_sf_logs(organization, credentials):
         except SalesforceGeneralError as e:
             logger.error(e.message)
     else:
+        if DEV:
+            print("Pulling FountainHealth Salesforce Login History Logs")
         logger.info("Pulling FountainHealth Salesforce Login History Logs")
         try:
             sf = Salesforce(username=credentials["FH_USERNAME"], password=credentials["PASSWORD"],
@@ -87,16 +102,12 @@ def get_sf_logs(organization, credentials):
             exit()
         except SalesforceGeneralError as e:
             logger.error(e.message)
-    if DEV:
-        print(type(get_last_login_time(organization=org)))
-        print(get_last_login_time(organization=org))
 
     query = (f"SELECT\n"
              f"LoginTime,UserID,Status,SourceIP,Platform,Application,\n"
              f"LoginGeoId,CountryIso\n"
              f"FROM LoginHistory\n"
-             f"WHERE LoginType != 'Remote Access 2.0' AND\n"
-             f"LoginTime > {get_last_login_time(organization=org)}\n"
+             f"WHERE LoginTime > {get_last_login_time(organization=org)}\n"
              f"ORDER BY LoginTime ASC\n"
              f"")
     results = sf.query(query=query)
@@ -120,11 +131,15 @@ def get_sf_logs(organization, credentials):
                 "Location": {"Longitude": longitude, "Latitude": latitude, "City": city,
                              "Country": result.get('CountryIso')},
                 "Status": result.get('Status'),
+                "SourceIP": result.get('SourceIp'),
                 "LoginUrl": result.get('LoginUrl'),
                 "Application": result.get('Application'),
                 "Platform": result.get('Platform'),
                 "Organization": organization
             }
+            if result.get('Status') != 'Success' or result.get('CountryIso') != 'US':
+                if result.get('SourceIp') != 'Salesforce.com IP':
+                    logins_to_review.append(login)
             if DEV:
                 print(login)
             with open("{}.log".format(organization), "a", encoding='utf-8') as logs:
@@ -137,3 +152,6 @@ orgs = ['fountainlife', 'fountainhealth']
 creds = get_secret()
 for org in orgs:
     get_sf_logs(organization=org, credentials=creds)
+
+if len(logins_to_review) > 0:
+    send_alert(credentials=creds, logins=logins_to_review)
