@@ -64,7 +64,7 @@ def send_alert(credentials, logins):
         userId = credentials["MS365_USER_ID"]
         endpoint = f'https://graph.microsoft.com/v1.0/users/{userId}/sendMail'
         toUserEmail = "brandon.bailey@initres.com"
-        email_msg = {'Message': {'Subject': "Test Sending Email from Python",
+        email_msg = {'Message': {'Subject': "Salesforce Logins For Review",
                                  'Body': {'ContentType': 'HTML', 'Content': f'{email_content}'},
                                  'ToRecipients': [{'EmailAddress': {'Address': toUserEmail}}]
                                  },
